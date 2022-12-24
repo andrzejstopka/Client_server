@@ -18,7 +18,7 @@ class Server:
             client_socket, address = server_socket.accept()
             print(f"Client connected from {address[0]}:{address[1]}")
             client_socket.send("Welcome to the server, type \"help\" to check all commands".encode("utf8"))
-            return client_socket
+            return client_socket, address
 
     def server_menu(self, client_socket):
         connection = client_socket.connection
@@ -26,6 +26,8 @@ class Server:
             data = connection.recv(1024).decode('utf8')
             if data == "create":
                 self.create_account(client_socket)
+            elif data == "login":
+                user = self.login(client_socket)
             elif data == "uptime":
                 connection.send(bytes(json.dumps(self.commands(client_socket)[0]), encoding="utf8"))
             elif data == "info":
@@ -61,21 +63,25 @@ class Server:
         account_data = json.loads(data)
         for key, value in account_data.items():
             User(key, value, False, client_socket)
+            print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{key}\" created")
 
-    # def login(self, client_socket):
-    #     connection = client_socket.connection
-    #     connection.send("Log in".encode("utf8"))
-    #     data = connection.recv(1024)
-    #     login_data = json.loads(data)
-    #     for name, password in login_data.items():
-    #         for user in self.all_users:
-    #             for username, user_data in user.items():
-    #                 if username == name and user_data[0] == password:
-    #                     print("Zalogowano")
+    def login(self, client_socket):
+        connection = client_socket.connection
+        connection.send("Log in".encode("utf8"))
+        data = connection.recv(1024)
+        login_data = json.loads(data)
+        for name, password in login_data.items():
+            for user in self.all_users:
+                for username, user_data in user.items():
+                    if username == name and user_data[0] == password:
+                        print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{username}\" has been logged")
+                        return user
 
 class Client:
     def __init__(self, server):
-        self.connection = server.create_connection() 
+        server_connection = server.create_connection()
+        self.connection = server_connection[0]
+        self.address = server_connection[1]
         self.logged = False
 
 
@@ -85,7 +91,7 @@ class User:
         self.password = password
         self.admin = admin
         self.mail_box = []
-        client.logged = True
+        client.logged = False
         self.add_to_all_users()
     
     def add_to_all_users(self):
@@ -94,6 +100,7 @@ class User:
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 client = Client(server)
+user1 = User("andrzej", "stopka", False, client)
 server.server_menu(client)
 
 

@@ -2,6 +2,12 @@ import socket
 import json
 import pwinput
 
+def give_data():
+    name = input("Name: ")
+    password = pwinput.pwinput(prompt='Password: ', mask='*')
+    account_data = json.dumps({name: password, name: password})
+    client_socket.send(bytes(account_data, encoding="utf8"))
+
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = 31415
 
@@ -15,10 +21,10 @@ while True:
     msg = client_socket.recv(1024)
     if msg.decode("utf-8") == "Create account":
         print("[CREATE YOUR ACCOUNT]")
-        name = input("Name: ")
-        password = pwinput.pwinput(prompt='Password: ', mask='*')
-        account_data = json.dumps({name: password, name: password})
-        client_socket.send(bytes(account_data, encoding="utf8"))
+        give_data()
+    elif msg.decode("utf-8") == "Log in":
+        print("[LOGIN YOUR ACCOUNT]")
+        give_data()
     elif msg.decode("utf8") == "Stop the client":
         print("Goodbye!")
         client_socket.close()

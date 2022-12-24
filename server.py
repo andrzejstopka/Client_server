@@ -22,12 +22,17 @@ class Server:
 
     def server_menu(self, client_socket):
         connection = client_socket.connection
+        user = None
         while True:
             data = connection.recv(1024).decode('utf8')
             if data == "create":
                 self.create_account(client_socket)
             elif data == "login":
                 user = self.login(client_socket)
+            elif data == "send":
+                self.send_message(client_socket)
+            elif data == "read":
+                self.read_message(client_socket, user)
             elif data == "uptime":
                 connection.send(bytes(json.dumps(self.commands(client_socket)[0]), encoding="utf8"))
             elif data == "info":
@@ -77,6 +82,20 @@ class Server:
                         print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{username}\" has been logged")
                         return user
 
+    def send_message(self, client_socket):
+        connection = client_socket.connection
+        connection.send("Send a message".encode("utf8"))
+        data = connection.recv(1024)
+        message_data = json.loads(data)
+        for name, message in message_data.items():
+            for user in self.all_users:
+                if name == user.name:
+                    user.mail_box.append(message)
+                    return
+        connection.send("There is no such user".encode("utf8"))  
+    
+    
+
 class Client:
     def __init__(self, server):
         server_connection = server.create_connection()
@@ -91,16 +110,14 @@ class User:
         self.password = password
         self.admin = admin
         self.mail_box = []
-        client.logged = False
-        self.add_to_all_users()
+        client.logged = True
+        server.all_users.append(self)
     
-    def add_to_all_users(self):
-        Server.all_users.append({self.name: [self.password, self.admin, self.mail_box]})
 
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 client = Client(server)
-user1 = User("andrzej", "stopka", False, client)
+# user1 = User("andrzej", "stopka", False, client)
 server.server_menu(client)
 
 

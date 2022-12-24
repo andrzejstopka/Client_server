@@ -2,11 +2,54 @@ import socket
 import json
 import pwinput
 
-def give_account_data():
+def create_account():
+    print("[CREATE YOUR ACCOUNT]")
+    validation = give_account_data("create")
+    if validation == False:
+        return
+    if validation == True:
+        print("Your account has been created")
+        return
+
+def log_in():
+    print("[LOGIN YOUR ACCOUNT]")
+    validation = give_account_data("login")
+    if validation == False:
+        return False
+    if validation == True:
+        print("Your account has been created")
+        return True
+
+def send_message():
+    print("[SEND A MESSAGE]")
+    recipient = input("Enter an username: ")
+    message = input("Enter a message: ")
+    message_data = json.dumps({recipient: message})
+    client_socket.send(bytes(message_data, encoding="utf-8"))
+    print("Your message has been sent!")
+
+def read_message():
+    print("[YOUR MAIL BOX]")
+    message = client_socket.recv(1024)
+    message_data = json.loads(message)
+    for key, value in message_data.items():
+        print(f"- \"{key}\"     |    {value}")
+
+def give_account_data(mode):
     name = input("Name: ")
     password = pwinput.pwinput(prompt='Password: ', mask='*')
     account_data = json.dumps({name: password})
     client_socket.send(bytes(account_data, encoding="utf8"))
+    validation = client_socket.recv(1024)
+    msg = validation.decode('utf8')
+    if msg == "wrong":
+        if mode == "create":
+            print("Username is already taken. Try again.")
+        else:
+            print("Login error, try again.")
+        return False
+    return 
+    
 
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = 31415
@@ -20,26 +63,13 @@ while True:
     client_socket.send(data)
     msg = client_socket.recv(1024)
     if msg.decode("utf-8") == "Create account":
-        print("[CREATE YOUR ACCOUNT]")
-        give_account_data()
-        print("Your account has been created")
+        create_account()
     elif msg.decode("utf-8") == "Log in":
-        print("[LOGIN YOUR ACCOUNT]")
-        give_account_data()
-        print("Your account has been logged in")
+        log_in()
     elif msg.decode("utf-8") == "Send a message":
-        print("[SEND A MESSAGE]")
-        recipient = input("Enter an username: ")
-        message = input("Enter a message: ")
-        message_data = json.dumps({recipient: message})
-        client_socket.send(bytes(message_data, encoding="utf-8"))
-        print("Your message has been sent!")
+        send_message()
     elif msg.decode("utf-8") == "Read a message":
-        print("[YOUR MAIL BOX]")
-        message = client_socket.recv(1024)
-        message_data = json.loads(message)
-        for key, value in message_data.items():
-            print(f"- \"{key}\"               {value}")
+        read_message()
     elif msg.decode("utf8") == "Stop the client":
         print("Goodbye!")
         client_socket.close()

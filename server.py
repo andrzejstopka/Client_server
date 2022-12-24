@@ -25,13 +25,13 @@ class Server:
         user = None
         while True:
             data = connection.recv(1024).decode('utf8')
-            if data == "create":
+            if data == "create" and user == None:
                 self.create_account(client_socket)
-            elif data == "login":
+            elif data == "login" and user == None:
                 user = self.login(client_socket)
-            elif data == "send":
+            elif data == "send" and user != None:
                 self.send_message(client_socket, user)
-            elif data == "read":
+            elif data == "read" and user != None:
                 self.read_message(client_socket, user)
             elif data == "uptime":
                 connection.send(bytes(json.dumps(self.commands(client_socket)[0]), encoding="utf8"))
@@ -62,13 +62,21 @@ class Server:
 
 
     def create_account(self, client_socket):
-        connection = client_socket.connection
-        connection.send("Create account".encode("utf8"))
-        data = connection.recv(1024)
-        account_data = json.loads(data)
-        for key, value in account_data.items():
+        while True:
+            connection = client_socket.connection
+            connection.send("Create account".encode("utf8"))
+            data = connection.recv(1024)
+            account_data = json.loads(data)
+            for key, value in account_data.items():
+                for user in self.all_users:
+                    if user.name == key:
+                        connection.send("wrong".encode("utf8"))
+                        return
             User(key, value, False, client_socket)
+            connection.send("done".encode("utf8"))
             print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{key}\" created")
+            return
+            
 
     def login(self, client_socket):
         connection = client_socket.connection
@@ -79,8 +87,11 @@ class Server:
             for user in self.all_users:
                 if user.name == name and user.password == password:
                     client_socket.logged = True
+                    connection.send("done".encode("utf8"))
                     print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{user.name}\" has been logged")
                     return user
+        connection.send("wrong".encode("utf8"))
+        return
 
     def send_message(self, client_socket, user):
         connection = client_socket.connection
@@ -92,7 +103,6 @@ class Server:
                 if name == recipient.name:
                     recipient.mail_box.append((message, user.name))
                     print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {name}")
-                    return
         connection.send("There is no such user".encode("utf8"))  
     
     def read_message(self, client_socket, user):

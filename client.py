@@ -34,6 +34,12 @@ while True:
         message_data = json.dumps({recipient: message})
         client_socket.send(bytes(message_data, encoding="utf-8"))
         print("Your message has been sent!")
+    elif msg.decode("utf-8") == "Read a message":
+        print("[YOUR MAIL BOX]")
+        message = client_socket.recv(1024)
+        message_data = json.loads(message)
+        for key, value in message_data.items():
+            print(f"- \"{key}\"               {value}")
     elif msg.decode("utf8") == "Stop the client":
         print("Goodbye!")
         client_socket.close()
@@ -41,4 +47,4 @@ while True:
     else:
         for key, value in json.loads(msg).items():
             print(f"{key}: {value}")
-        print()
+    print()

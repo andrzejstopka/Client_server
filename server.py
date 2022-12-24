@@ -30,7 +30,7 @@ class Server:
             elif data == "login":
                 user = self.login(client_socket)
             elif data == "send":
-                self.send_message(client_socket)
+                self.send_message(client_socket, user)
             elif data == "read":
                 self.read_message(client_socket, user)
             elif data == "uptime":
@@ -77,24 +77,35 @@ class Server:
         login_data = json.loads(data)
         for name, password in login_data.items():
             for user in self.all_users:
-                for username, user_data in user.items():
-                    if username == name and user_data[0] == password:
-                        print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{username}\" has been logged")
-                        return user
+                if user.name == name and user.password == password:
+                    client_socket.logged = True
+                    print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{user.name}\" has been logged")
+                    return user
 
-    def send_message(self, client_socket):
+    def send_message(self, client_socket, user):
         connection = client_socket.connection
         connection.send("Send a message".encode("utf8"))
         data = connection.recv(1024)
         message_data = json.loads(data)
         for name, message in message_data.items():
-            for user in self.all_users:
-                if name == user.name:
-                    user.mail_box.append(message)
+            for recipient in self.all_users:
+                if name == recipient.name:
+                    recipient.mail_box.append((message, user.name))
+                    print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {name}")
                     return
         connection.send("There is no such user".encode("utf8"))  
     
-    
+    def read_message(self, client_socket, user):
+        connection = client_socket.connection
+        connection.send("Read a message".encode("utf8"))
+        message = dict()
+        if len(user.mail_box) == 0:
+            message = {"[INFO]": "You don't have any messages"}
+        else:
+            for item in user.mail_box:
+                message[item[0]] = f"from [{item[1]}]"
+        message = json.dumps(message)
+        connection.send(bytes(message, encoding="utf8"))
 
 class Client:
     def __init__(self, server):
@@ -110,14 +121,13 @@ class User:
         self.password = password
         self.admin = admin
         self.mail_box = []
-        client.logged = True
         server.all_users.append(self)
     
 
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 client = Client(server)
-# user1 = User("andrzej", "stopka", False, client)
+user1 = User("andrzej", "stopka", False, client)
 server.server_menu(client)
 
 

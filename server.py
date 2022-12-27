@@ -27,7 +27,7 @@ class Server:
         while True:
             data = connection.recv(1024).decode('utf8')
             if data == "admin" and user != None and user.admin == True:
-                self.admin_panel(client_socket)
+                self.admin_panel(connection)
             elif data == self.admin_password:
                 user.admin = True
                 connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
@@ -38,9 +38,9 @@ class Server:
             elif data == "send" and user != None:
                 self.send_message(client_socket, user)
             elif data == "read" and user != None:
-                self.read_message(client_socket, user)
+                self.read_message(connection, user)
             elif data == "clear" and user != None:
-                self.clear_inbox(client_socket, user)
+                self.clear_inbox(connection, user)
             elif data == "uptime":
                 connection.send(bytes(json.dumps(self.commands(user)[0]), encoding="utf8"))
             elif data == "info":
@@ -74,8 +74,7 @@ class Server:
         self.all_commands = [uptime, info, help, unknown_command]
         return self.all_commands
 
-    def admin_panel(self, client_socket):
-        connection = client_socket.connection
+    def admin_panel(self, connection):
         connection.send("Admin panel".encode("utf8"))
 
         commands = {"reset": "reset user's password", "sendall": "send message to all users", "readfor": "read user's inbox", "delete": "delete user account"}
@@ -213,8 +212,7 @@ class Server:
                 connection.send("There is no such user".encode("utf8"))  
         return
 
-    def read_message(self, client_socket, user):
-        connection = client_socket.connection
+    def read_message(self, connection, user):
         connection.send("Read a message".encode("utf8"))
         message = dict()
         reset_password = False
@@ -235,9 +233,8 @@ class Server:
             user.password = new_password
         return
 
-    def clear_inbox(self, client_socket, user):
+    def clear_inbox(self, connection, user):
         user.mail_box.clear()
-        connection = client_socket.connection
         connection.send("Your inbox is now empty".encode("utf8"))
 
 

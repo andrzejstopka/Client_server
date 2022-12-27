@@ -128,24 +128,23 @@ while True:
     print()
     client_socket.send(data)
     msg = client_socket.recv(1024)
-    if msg.decode('utf-8') == "Admin panel":
+    msg = msg.decode('utf-8')
+    if msg == "Admin panel":
         admin_panel()
-    elif msg.decode('utf-8') == "You have authenticated, you are given administrator privileges":
-        print(msg.decode('utf-8'))
-    elif msg.decode("utf-8") == "Create account":
+    elif msg == "You have authenticated, you are given administrator privileges":
+        print(msg)
+    elif msg == "Create account":
         create_account()
-    elif msg.decode("utf-8") == "Log in":
+    elif msg == "Log in":
         log_in()
-    elif msg.decode("utf-8") == "Send a message":
+    elif msg == "Send a message":
         send_message()
-    elif msg.decode("utf-8") == "Read a message":
+    elif msg == "Read a message":
         read_message()
-    elif msg.decode("utf-8") == "Your inbox is now empty":
-        print(msg.decode("utf-8"))
-    elif msg.decode("utf-8") == "Logged out":
+    elif msg == "Logged out":
         print("You have been logged out")
         continue
-    elif msg.decode("utf8") == "Stop the client":
+    elif msg == "Stop the client":
         print("Goodbye!")
         client_socket.close()
         break

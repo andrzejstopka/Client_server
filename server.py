@@ -79,7 +79,7 @@ class Server:
                     if user.name == key:
                         found = True
                         break
-                if not found:
+                if not found and key != "admin" and value != "reset":
                     User(key, value, False, client_socket)
                     connection.send("done".encode("utf8"))
                     print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{key}\" created")
@@ -96,6 +96,11 @@ class Server:
             data = connection.recv(1024)
             login_data = json.loads(data)
             for name, password in login_data.items():
+                if password == "reset":
+                    for user in self.all_users:
+                        if user.admin == True:
+                            user.mail_box.append(("[PASSWORD RESET REQUEST]", name))
+                            return
                 for user in self.all_users:
                     if user.name == name and user.password == password:
                         client_socket.logged = True
@@ -104,9 +109,6 @@ class Server:
                         return user
             connection.send("wrong".encode("utf8"))
         
-
-    # Ogarnąć panel admina
-    # Ogarnąć zapis w jsonie
     def send_message(self, client_socket, user):
         connection = client_socket.connection
         connection.send("Send a message".encode("utf8"))
@@ -114,18 +116,25 @@ class Server:
         message_data = json.loads(data)
         for name, message in message_data.items():
             if name == user.name:
-                connection.send("You can't send a massage to yourself".encode("utf8"))
+                connection.send("You can't send a message to yourself".encode("utf8"))
                 return
-            for recipient in self.all_users:
-                if name == recipient.name:
-                    if len(recipient.mail_box) >= 5:
-                        connection.send("The recipient's inbox is full, you cannot send the message".encode("utf8"))
+            elif name == "admin":
+                for admin in self.all_users:
+                    if admin.admin == True:
+                        admin.mail_box.append((message, user.name))
+                connection.send("Sent".encode("utf8"))
+                return
+            else:
+                for recipient in self.all_users:
+                    if name == recipient.name:
+                        if len(recipient.mail_box) >= 5 and recipient.admin == False:
+                            connection.send("The recipient's inbox is full, you cannot send the message".encode("utf8"))
+                            return
+                        connection.send("Sent".encode("utf8"))
+                        recipient.mail_box.append((message, user.name)) 
+                        print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {name}")
                         return
-                    connection.send("Sent".encode("utf8"))
-                    recipient.mail_box.append((message, user.name))
-                    print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {name}")
-                    return
-            connection.send("There is no such user".encode("utf8"))  
+                connection.send("There is no such user".encode("utf8"))  
         return
 
     def read_message(self, client_socket, user):
@@ -161,7 +170,7 @@ class User:
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 client = Client(server)
-user1 = User("andrzej", "stopka", False, client)
+user1 = User("andrzej", "stopka", True, client)
 user2 = User("ania", "stopka", False, client)
 server.server_menu(client)
 

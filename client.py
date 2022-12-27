@@ -22,10 +22,12 @@ def log_in():
     while True:
         print("[LOGIN YOUR ACCOUNT]")
         name = input("Name: ")
-        password = pwinput.pwinput(prompt='Password: ', mask='*')
+        password = pwinput.pwinput(prompt='Password (if you want to reset your password type here \"reset\"): ', mask='*')
         login_data = json.dumps({name: password})
         client_socket.send(bytes(login_data, encoding="utf8"))
-
+        if password == "reset":
+            print("Your password reset request has been sent.")
+            return
         validation = client_socket.recv(1024)
         msg = validation.decode('utf8')
         if msg == "wrong":
@@ -36,7 +38,7 @@ def log_in():
 
 def send_message():
     print("[SEND A MESSAGE]")
-    recipient = input("Enter an username: ")
+    recipient = input("Enter an username (if you want to send a message to the administrator type \"admin\"): ")
     message = input("Enter a message: ")
     message_data = json.dumps({recipient: message})
     client_socket.send(bytes(message_data, encoding="utf-8"))

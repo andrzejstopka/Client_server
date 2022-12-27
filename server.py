@@ -5,6 +5,7 @@ import datetime
 
 class Server:
     all_users = []
+    admin_password = "becomeanadmin"
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -27,6 +28,9 @@ class Server:
             data = connection.recv(1024).decode('utf8')
             if data == "admin" and user != None and user.admin == True:
                 self.admin_panel(client_socket)
+            elif data == self.admin_password:
+                user.admin = True
+                connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
             elif data == "create" and user == None:
                 self.create_account(client_socket)
             elif data == "login" and user == None:
@@ -38,35 +42,34 @@ class Server:
             elif data == "clear" and user != None:
                 self.clear_inbox(client_socket, user)
             elif data == "uptime":
-                connection.send(bytes(json.dumps(self.commands(client_socket)[0]), encoding="utf8"))
+                connection.send(bytes(json.dumps(self.commands(user)[0]), encoding="utf8"))
             elif data == "info":
-                connection.send(bytes(json.dumps(self.commands(client_socket)[1]), encoding="utf8"))
+                connection.send(bytes(json.dumps(self.commands(user)[1]), encoding="utf8"))
             elif data == "help":
-                connection.send(bytes(json.dumps(self.commands(client_socket)[2]), encoding="utf8"))
+                connection.send(bytes(json.dumps(self.commands(user)[2]), encoding="utf8"))
             elif data == "stop":
                 connection.send("Stop the client".encode("utf8"))
-                if user:
-                    user.logged = False
                 print("Server is turning off")
+                with open("users.json", "w") as data:
+                    json.dump(self.all_users, data, default=lambda u: u.user_to_dict()) 
                 break
             elif data == "off" and user != None:
                 print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User \"{user.name}\" has been logged out")
-                client_socket.logged = False
                 user = None
                 connection.send("Logged out".encode("utf8"))
             else:
-                connection.send(bytes(json.dumps(self.commands(client_socket)[3]), encoding="utf8"))
+                connection.send(bytes(json.dumps(self.commands(user)[3]), encoding="utf8"))
                 continue
 
-    def commands(self, client):
+    def commands(self, user):
         uptime = {"Uptime": str(datetime.datetime.now() - self.start_time)}
         info = {"Title": "My First Client/Server Application", "Version": "1.1.0", "Date created": "21.12.2022"}
         help = {"create": "create your account", "login": "Log in to your account", "uptime": "show the server's uptime", "info": "show the server's info", "help": "show all available commands", "stop": "stop the server"}
         unknown_command = {"[Error]": "Unknown command, please try again"}
-        if client.logged:
+        if user != None:
             del help["create"]
             del help["login"]
-            help = {"send": "send a message to the user", "read": "read your messages", "clear": "remove all your messages" **help, "off": "log out of your account"}
+            help = {"send": "send a message to the user", "read": "read your messages", "clear": "remove all your messages", **help, "off": "log out of your account"}
 
         self.all_commands = [uptime, info, help, unknown_command]
         return self.all_commands
@@ -154,7 +157,7 @@ class Server:
                         found = True
                         break
                 if not found and key != "admin" and value != "reset":
-                    User(key, value, False, client_socket)
+                    User(key, value, False, list())
                     connection.send("done".encode("utf8"))
                     print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{key}\" created")
                     return
@@ -177,7 +180,6 @@ class Server:
                             return
                 for user in self.all_users:
                     if user.name == name and user.password == password:
-                        client_socket.logged = True
                         connection.send("done".encode("utf8"))
                         print(f"[{client_socket.address[0]}:{client_socket.address[1]}] Account \"{user.name}\" has been logged")
                         return user
@@ -239,28 +241,43 @@ class Server:
         connection.send("Your inbox is now empty".encode("utf8"))
 
 
+
 class Client:
     def __init__(self, server):
         server_connection = server.create_connection()
         self.connection = server_connection[0]
         self.address = server_connection[1]
-        self.logged = False
 
 
 class User:
-    def __init__(self, name, password, admin):
+    def __init__(self, name, password, admin, mail_box):
         self.name = name
         self.password = password
         self.admin = admin
-        self.mail_box = []
+        self.mail_box = mail_box
         server.all_users.append(self)
     
+    def user_to_dict(self):
+        return {
+        "name": self.name,
+        "password": self.password,
+        "admin": self.admin,
+        "mail_box": self.mail_box
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["name"], data["password"], data["admin"], data["mail_box"])
 
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
+try:
+    with open("users.json", "r") as data_file:
+            data = json.load(data_file)
+    server.all_users = [User.from_dict(d) for d in data]
+except json.decoder.JSONDecodeError:
+    server.all_users = []
 client = Client(server)
-user1 = User("andrzej", "stopka", True)
-user2 = User("ania", "stopka", False)
 server.server_menu(client)
 
 

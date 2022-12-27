@@ -130,6 +130,8 @@ while True:
     msg = client_socket.recv(1024)
     if msg.decode('utf-8') == "Admin panel":
         admin_panel()
+    elif msg.decode('utf-8') == "You have authenticated, you are given administrator privileges":
+        print(msg.decode('utf-8'))
     elif msg.decode("utf-8") == "Create account":
         create_account()
     elif msg.decode("utf-8") == "Log in":

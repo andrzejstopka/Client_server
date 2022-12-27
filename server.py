@@ -84,9 +84,15 @@ class Server:
                 self.reset_password(connection)
             elif command == "sendall":
                 self.send_to_all(connection)
+            elif command == "readfor":
+                self.read_for(connection)
+            elif command == "delete":
+                self.delete_user(connection)
             elif command == "off":
                 connection.send(command.encode("utf8"))
                 return
+            else:
+                connection.send("Unknown command, please try again".encode("utf8"))
 
     def reset_password(self, connection):
         connection.send("reset password".encode("utf8"))
@@ -106,8 +112,34 @@ class Server:
         for user in self.all_users:
             if user.admin == False:
                 user.mail_box.append((message_content, "Admin"))
+    
+    def read_for(self, connection):
+        connection.send("readfor".encode("utf8"))
+        username = connection.recv(1024)
+        username = username.decode("utf8")
 
+        for user in self.all_users:
+            user_inbox = dict()
+            if user.name == username:
+                for message in user.mail_box:
+                    user_inbox[message[0]] = message[1]
+        user_inbox = json.dumps(user_inbox)
+        connection.send(bytes(user_inbox, encoding="utf8"))
 
+    def delete_user(self, connection):
+        connection.send("delete".encode("utf8"))
+        username = connection.recv(1024)
+        username = username.decode("utf8")
+
+        for user in self.all_users:
+            if user.name == username:
+                self.all_users.remove(user)
+                del user
+                connection.send("User has been deleted".encode("utf8"))
+                return
+        connection.send("User not found".encode("utf8"))
+
+        
     def create_account(self, client_socket):
         connection = client_socket.connection
         connection.send("Create account".encode("utf8"))

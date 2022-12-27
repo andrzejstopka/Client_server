@@ -17,8 +17,14 @@ def admin_panel():
             reset_password()
         elif server_answer == "sendtoall":
             send_to_all()
+        elif server_answer == "readfor":
+            read_for()
+        elif server_answer == "delete":
+            delete_user()
         elif server_answer == "off":
             return
+        else:
+            print(server_answer)
             
 def reset_password():
     user_name = input("Enter user name to reset his password: ")
@@ -29,9 +35,24 @@ def send_to_all():
     client_socket.send(message_content.encode('utf8'))
     print("Your message has been sent to all")
 
+def read_for():
+    read_for_user = input("Enter the username to read his messages: ")
+    client_socket.send(read_for_user.encode('utf8'))
+    user_inbox = client_socket.recv(1024)
+    user_inbox = json.loads(user_inbox)
+
+    for key, value in user_inbox.items():
+        print(f"{key} from [{value}]")
+
+def delete_user():
+    username = input("Enter the username to delete: ")
+    client_socket.send(username.encode('utf8'))
+    server_answer = client_socket.recv(1024)
+    print(server_answer.decode('utf8'))
+
 def create_account():    
-       while True:
-        print("[CREATE YOUR ACCOUNT]")
+    print("[CREATE YOUR ACCOUNT]")
+    while True:
         name = input("Name: ")
         password = pwinput.pwinput(prompt='Password: ', mask='*')
         account_data = json.dumps({name: password})
@@ -46,8 +67,8 @@ def create_account():
             break
 
 def log_in():
+    print("[LOGIN YOUR ACCOUNT]")
     while True:
-        print("[LOGIN YOUR ACCOUNT]")
         name = input("Name: ")
         password = pwinput.pwinput(prompt='Password (if you want to reset your password type here \"reset\"): ', mask='*')
         login_data = json.dumps({name: password})

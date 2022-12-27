@@ -15,14 +15,19 @@ def admin_panel():
 
         if server_answer == "reset password":
             reset_password()
+        elif server_answer == "sendtoall":
+            send_to_all()
         elif server_answer == "off":
             return
-
-        
             
 def reset_password():
     user_name = input("Enter user name to reset his password: ")
     client_socket.send(user_name.encode('utf8'))
+
+def send_to_all():
+    message_content = input("Your message: ")
+    client_socket.send(message_content.encode('utf8'))
+    print("Your message has been sent to all")
 
 def create_account():    
        while True:

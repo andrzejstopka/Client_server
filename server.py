@@ -66,7 +66,7 @@ class Server:
         if client.logged:
             del help["create"]
             del help["login"]
-            help = {"send": "send a message to the user", "read": "read your messages", **help, "off": "log out of your account"}
+            help = {"send": "send a message to the user", "read": "read your messages", "clear": "remove all your messages" **help, "off": "log out of your account"}
 
         self.all_commands = [uptime, info, help, unknown_command]
         return self.all_commands
@@ -82,6 +82,8 @@ class Server:
             command = command.decode("utf8")
             if command == "reset":
                 self.reset_password(connection)
+            elif command == "sendall":
+                self.send_to_all(connection)
             elif command == "off":
                 connection.send(command.encode("utf8"))
                 return
@@ -96,6 +98,15 @@ class Server:
                 user.password = "newpassword"
                 user.mail_box.append(("type your new password", "Admin"))
     
+    def send_to_all(self, connection):
+        connection.send("sendtoall".encode("utf8"))
+        message_content = connection.recv(1024)
+        message_content = message_content.decode("utf8")
+
+        for user in self.all_users:
+            if user.admin == False:
+                user.mail_box.append((message_content, "Admin"))
+
 
     def create_account(self, client_socket):
         connection = client_socket.connection

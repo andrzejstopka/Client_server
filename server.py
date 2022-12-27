@@ -35,6 +35,8 @@ class Server:
                 self.send_message(client_socket, user)
             elif data == "read" and user != None:
                 self.read_message(client_socket, user)
+            elif data == "clear" and user != None:
+                self.clear_inbox(client_socket, user)
             elif data == "uptime":
                 connection.send(bytes(json.dumps(self.commands(client_socket)[0]), encoding="utf8"))
             elif data == "info":
@@ -187,6 +189,12 @@ class Server:
             new_password = new_password.decode("utf8")
             user.password = new_password
         return
+
+    def clear_inbox(self, client_socket, user):
+        user.mail_box.clear()
+        connection = client_socket.connection
+        connection.send("Your inbox is now empty".encode("utf8"))
+
 
 class Client:
     def __init__(self, server):

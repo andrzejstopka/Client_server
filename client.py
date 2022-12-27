@@ -112,6 +112,8 @@ while True:
         send_message()
     elif msg.decode("utf-8") == "Read a message":
         read_message()
+    elif msg.decode("utf-8") == "Your inbox is now empty":
+        print(msg.decode("utf-8"))
     elif msg.decode("utf-8") == "Logged out":
         print("You have been logged out")
         continue

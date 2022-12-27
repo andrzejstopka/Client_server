@@ -25,7 +25,9 @@ class Server:
         user = None
         while True:
             data = connection.recv(1024).decode('utf8')
-            if data == "create" and user == None:
+            if data == "admin" and user != None and user.admin == True:
+                self.admin_panel(client_socket)
+            elif data == "create" and user == None:
                 self.create_account(client_socket)
             elif data == "login" and user == None:
                 user = self.login(client_socket)
@@ -41,10 +43,12 @@ class Server:
                 connection.send(bytes(json.dumps(self.commands(client_socket)[2]), encoding="utf8"))
             elif data == "stop":
                 connection.send("Stop the client".encode("utf8"))
+                if user:
+                    user.logged = False
                 print("Server is turning off")
                 break
             elif data == "off" and user != None:
-                print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} has been logged out")
+                print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User \"{user.name}\" has been logged out")
                 client_socket.logged = False
                 user = None
                 connection.send("Logged out".encode("utf8"))
@@ -54,7 +58,7 @@ class Server:
 
     def commands(self, client):
         uptime = {"Uptime": str(datetime.datetime.now() - self.start_time)}
-        info = {"Title": "My First Client/Server Application", "Version": "1.0.0", "Date created": "21.12.2022"}
+        info = {"Title": "My First Client/Server Application", "Version": "1.1.0", "Date created": "21.12.2022"}
         help = {"create": "create your account", "login": "Log in to your account", "uptime": "show the server's uptime", "info": "show the server's info", "help": "show all available commands", "stop": "stop the server"}
         unknown_command = {"[Error]": "Unknown command, please try again"}
         if client.logged:
@@ -65,6 +69,31 @@ class Server:
         self.all_commands = [uptime, info, help, unknown_command]
         return self.all_commands
 
+    def admin_panel(self, client_socket):
+        connection = client_socket.connection
+        connection.send("Admin panel".encode("utf8"))
+
+        commands = {"reset": "reset user's password", "sendall": "send message to all users", "readfor": "read user's inbox", "delete": "delete user account"}
+        connection.send(bytes(json.dumps(commands), encoding="utf8"))
+        while True:
+            command = connection.recv(1024)
+            command = command.decode("utf8")
+            if command == "reset":
+                self.reset_password(connection)
+            elif command == "off":
+                connection.send(command.encode("utf8"))
+                return
+
+    def reset_password(self, connection):
+        connection.send("reset password".encode("utf8"))
+        user_name = connection.recv(1024)
+        user_name = user_name.decode("utf8")
+
+        for user in self.all_users:
+            if user.name == user_name:
+                user.password = "newpassword"
+                user.mail_box.append(("type your new password", "Admin"))
+    
 
     def create_account(self, client_socket):
         connection = client_socket.connection
@@ -141,13 +170,22 @@ class Server:
         connection = client_socket.connection
         connection.send("Read a message".encode("utf8"))
         message = dict()
+        reset_password = False
         if len(user.mail_box) == 0:
             message = {"[INFO]": "You don't have any messages"}
         else:
             for item in user.mail_box:
+                if item[0] == "type your new password":
+                    reset_password = True
                 message[item[0]] = f"from [{item[1]}]"
         message = json.dumps(message)
         connection.send(bytes(message, encoding="utf8"))
+        if reset_password == False:
+            return
+        elif reset_password:
+            new_password = connection.recv(1024)
+            new_password = new_password.decode("utf8")
+            user.password = new_password
         return
 
 class Client:
@@ -159,7 +197,7 @@ class Client:
 
 
 class User:
-    def __init__(self, name, password, admin, client):
+    def __init__(self, name, password, admin):
         self.name = name
         self.password = password
         self.admin = admin
@@ -170,8 +208,8 @@ class User:
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 client = Client(server)
-user1 = User("andrzej", "stopka", True, client)
-user2 = User("ania", "stopka", False, client)
+user1 = User("andrzej", "stopka", True)
+user2 = User("ania", "stopka", False)
 server.server_menu(client)
 
 

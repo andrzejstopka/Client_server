@@ -2,6 +2,28 @@ import socket
 import json
 import pwinput
 
+def admin_panel():
+    print("Admin Panel")
+    commands = client_socket.recv(1024)
+    for key, value in json.loads(commands).items():
+        print(f"{key} - {value}")
+    while True:
+        admin_command = input("Type the command: ")
+        client_socket.send(admin_command.encode('utf8'))
+        server_answer = client_socket.recv(1024)
+        server_answer = server_answer.decode('utf8')
+
+        if server_answer == "reset password":
+            reset_password()
+        elif server_answer == "off":
+            return
+
+        
+            
+def reset_password():
+    user_name = input("Enter user name to reset his password: ")
+    client_socket.send(user_name.encode('utf8'))
+
 def create_account():    
        while True:
         print("[CREATE YOUR ACCOUNT]")
@@ -26,7 +48,7 @@ def log_in():
         login_data = json.dumps({name: password})
         client_socket.send(bytes(login_data, encoding="utf8"))
         if password == "reset":
-            print("Your password reset request has been sent.")
+            print("Your password reset request has been sent. After the admin reset your password, log on with \"newpassword\" and go to your inbox to set the new password")
             return
         validation = client_socket.recv(1024)
         msg = validation.decode('utf8')
@@ -55,8 +77,17 @@ def read_message():
     print("[YOUR MAIL BOX]")
     message = client_socket.recv(1024)
     message_data = json.loads(message)
+    reset_password = False
     for key, value in message_data.items():
         print(f"- \"{key}\"     |    {value}")
+        if key == "type your new password":
+            reset_password = True
+    if reset_password == False:
+        return
+    else:
+        new_password = pwinput.pwinput(prompt='Enter your new password: ', mask='*')
+        client_socket.send(new_password.encode("utf-8"))
+        return
 
 
 
@@ -71,7 +102,9 @@ while True:
     print()
     client_socket.send(data)
     msg = client_socket.recv(1024)
-    if msg.decode("utf-8") == "Create account":
+    if msg.decode('utf-8') == "Admin panel":
+        admin_panel()
+    elif msg.decode("utf-8") == "Create account":
         create_account()
     elif msg.decode("utf-8") == "Log in":
         log_in()

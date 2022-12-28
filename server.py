@@ -28,7 +28,7 @@ class Server:
             data = connection.recv(1024).decode('utf8')
             if data == "admin" and user != None and user.admin == True:
                 self.admin_panel(connection)
-            elif data == self.admin_password:
+            elif data == self.admin_password and user != None:
                 user.admin = True
                 connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
             elif data == "create" and user == None:
@@ -50,8 +50,6 @@ class Server:
             elif data == "stop":
                 connection.send("Stop the client".encode("utf8"))
                 print("Server is turning off")
-                with open("users.json", "w") as data:
-                    json.dump(self.all_users, data, default=lambda u: u.user_to_dict()) 
                 break
             elif data == "off" and user != None:
                 print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User \"{user.name}\" has been logged out")
@@ -60,6 +58,8 @@ class Server:
             else:
                 connection.send(bytes(json.dumps(self.commands(user)[3]), encoding="utf8"))
                 continue
+            with open("users.json", "w") as data:
+                    json.dump(self.all_users, data, default=lambda u: u.user_to_dict()) 
 
     def commands(self, user):
         uptime = {"Uptime": str(datetime.datetime.now() - self.start_time)}
@@ -119,7 +119,6 @@ class Server:
         connection.send("readfor".encode("utf8"))
         username = connection.recv(1024)
         username = username.decode("utf8")
-
         for user in self.all_users:
             user_inbox = dict()
             if user.name == username:
@@ -276,7 +275,4 @@ except json.decoder.JSONDecodeError:
     server.all_users = []
 client = Client(server)
 server.server_menu(client)
-
-
-
 

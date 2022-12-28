@@ -120,8 +120,8 @@ class Server:
         username = connection.recv(1024)
         username = username.decode("utf8")
         for user in self.all_users:
-            user_inbox = dict()
             if user.name == username:
+                user_inbox = dict()
                 for message in user.mail_box:
                     user_inbox[message[0]] = message[1]
         user_inbox = json.dumps(user_inbox)

@@ -5,9 +5,8 @@ from server import *
 class TestServer(unittest.TestCase):
     def setUp(self):
         self.server = server
-        self.andrzej = User("Andrzej", "Stopka", True, [("hej", "Ania"), ("cześć", "Ania")])
+        self.andrzej = User("Andrzej", "Stopka", True, [("hej", "Ania"), ("co tam", "Ania")])
         self.ania = User("Ania", "Stopka", False, [])
-        self.tymon = User("Tymon", "Stopka", False, [("type your new password", "Admin")])
         server.all_users = [self.andrzej, self.ania]
 
     def test_create_account(self):
@@ -49,11 +48,27 @@ class TestServer(unittest.TestCase):
 
         result_1 = self.server.read_message(self.andrzej)
         result_2 = self.server.read_message(self.ania)
-        result_3 = self.server.read_message(self.tymon)
         
         self.assertIsInstance(result_1, dict)
         self.assertEqual(result_2, {"[INFO]": "You don't have any messages"})
-        self.assertEqual(result_3, {})
+
+    def test_readfor(self):
+
+        result_1 = self.server.read_for("Andrzej")
+        result_2 = self.server.read_for("Ania")
+        result_3 = self.server.read_for("anybody")
+        
+        self.assertEqual(result_1, json.dumps({"hej": "Ania", "co tam": "Ania"}))
+        self.assertEqual(result_2, json.dumps({"[INFO]": "You don't have any messages"}))
+        self.assertEqual(result_3, json.dumps({"[ERROR]": "User not found"}))
+        
+    def test_delete_user(self):
+
+        result_1 = self.server.delete_user("Ania")
+        result_2 = self.server.delete_user("anybody")
+
+        self.assertEqual(result_1, f"User Ania has been deleted".encode("utf8"))
+        self.assertEqual(result_2, f"User anybody not found".encode("utf8"))
 
 if __name__ == "__main__":
     unittest.main()

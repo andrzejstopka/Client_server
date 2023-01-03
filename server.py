@@ -20,11 +20,7 @@ class Server:
             print("Server listening on...")
             client_socket, address = server_socket.accept()
             print(f"Client connected from {address[0]}:{address[1]}")
-            client_socket.send(
-                'Welcome to the server, type "help" to check all commands'.encode(
-                    "utf8"
-                )
-            )
+            client_socket.send('Welcome to the server, type "help" to check all commands'.encode("utf8"))
             return client_socket, address
 
     def server_menu(self, client_socket):
@@ -32,12 +28,14 @@ class Server:
         user = None
         while True:
             data = connection.recv(1024).decode("utf8")
+
             if data == "admin" and user is not None and user.admin is True:
                 self.admin_panel(connection)
+
             elif data == self.admin_password and user is not None:
                 user.admin = True
                 connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
-           
+
            
             elif data == "create" and user is None:
                 while True:
@@ -50,7 +48,6 @@ class Server:
                         break
                     else:
                         connection.send("Username is already taken. Try again.".encode("utf8")) 
-            
             
             elif data == "login" and user is None:
                 while True:
@@ -76,13 +73,13 @@ class Server:
                 if response == "Your message to admin has been sent!".encode("utf8"):
                     recipient_name = list(message_data.keys())[0]
                     print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {recipient_name}")
-            
+
             
             elif data == "read" and user is not None:
                 response = self.read_message(user)
                 response = json.dumps(response)
                 connection.send(bytes(response, encoding="utf8"))
-                if not response:
+                if "type your new password" in response:
                     new_password = connection.recv(1024)
                     new_password = new_password.decode("utf8")
                     connection.send("Your password has been changed".encode("utf8"))
@@ -105,14 +102,14 @@ class Server:
                 print("Server is turning off")
                 break
             elif data == "off" and user is not None:
+                connection.send("You have been logged out".encode("utf8"))
                 print(f'[{client_socket.address[0]}:{client_socket.address[1]}] User "{user.name}" has been logged out')
                 user = None
-                connection.send("Logged out".encode("utf8"))
             else:
                 connection.send(bytes(json.dumps(self.commands(user)[3]), encoding="utf8"))
-                continue
             with open("users.json", "w") as data:
                 json.dump(self.all_users, data, default=lambda u: u.user_to_dict())
+                continue
 
     def commands(self, user):
         uptime = {"Uptime": str(datetime.datetime.now() - self.start_time)}
@@ -145,8 +142,6 @@ class Server:
         return self.all_commands
 
     def admin_panel(self, connection):
-        connection.send("Admin panel".encode("utf8"))
-
         commands = {
             "reset": "reset user's password",
             "sendall": "send message to all users",
@@ -158,63 +153,67 @@ class Server:
             command = connection.recv(1024)
             command = command.decode("utf8")
             if command == "reset":
-                self.reset_password(connection)
+                user_name = connection.recv(1024)
+                user_name = user_name.decode("utf8")
+                self.reset_password(user_name)
+                connection.send(f"Password user {user_name} has been reset".encode("utf8"))
+
             elif command == "sendall":
-                self.send_to_all(connection)
+                message_content = connection.recv(1024)
+                message_content = message_content.decode("utf8")
+                self.send_to_all(message_content)
+                connection.send(("Your message has been sent to all".encode("utf8")))
+
             elif command == "readfor":
-                self.read_for(connection)
+                username = connection.recv(1024)
+                username = username.decode("utf8")
+                connection.send(bytes(self.read_for(username), encoding="utf8"))
+
+
             elif command == "delete":
-                self.delete_user(connection)
+                username = connection.recv(1024)
+                username = username.decode("utf8")
+                connection.send(self.delete_user(username))
+
             elif command == "off":
-                connection.send(command.encode("utf8"))
+                connection.send("You disable the admin panel".encode("utf-8"))
                 return
             else:
                 connection.send("Unknown command, please try again".encode("utf8"))
 
-    def reset_password(self, connection):
-        connection.send("reset password".encode("utf8"))
-        user_name = connection.recv(1024)
-        user_name = user_name.decode("utf8")
+    def reset_password(self, username):
 
         for user in self.all_users:
-            if user.name == user_name:
+            if user.name == username:
                 user.password = "newpassword"
                 user.mail_box.append(("type your new password", "Admin"))
 
-    def send_to_all(self, connection):
-        connection.send("sendtoall".encode("utf8"))
-        message_content = connection.recv(1024)
-        message_content = message_content.decode("utf8")
-
+    def send_to_all(self, message_content):
         for user in self.all_users:
             if user.admin is False:
                 user.mail_box.append((message_content, "Admin"))
 
-    def read_for(self, connection):
-        connection.send("readfor".encode("utf8"))
-        username = connection.recv(1024)
-        username = username.decode("utf8")
-
+    def read_for(self, username):
+        
+        user_inbox = dict()
         for user in self.all_users:
             if user.name == username:
-                user_inbox = dict()
                 for message in user.mail_box:
                     user_inbox[message[0]] = message[1]
+                if user_inbox == {}:
+                    user_inbox["[INFO]"] = "You don't have any messages"
+        if user_inbox == {}:
+            user_inbox["[ERROR]"] = "User not found"
         user_inbox = json.dumps(user_inbox)
-        connection.send(bytes(user_inbox, encoding="utf8"))
+        return user_inbox
 
-    def delete_user(self, connection):
-        connection.send("delete".encode("utf8"))
-        username = connection.recv(1024)
-        username = username.decode("utf8")
-
+    def delete_user(self, username):
         for user in self.all_users:
             if user.name == username:
                 self.all_users.remove(user)
                 del user
-                connection.send("User has been deleted".encode("utf8"))
-                return
-        connection.send("User not found".encode("utf8"))
+                return f"User {username} has been deleted".encode("utf8")
+        return f"User {username} not found".encode("utf8")
 
     def create_account(self, account_data):
 
@@ -266,12 +265,14 @@ class Server:
         else:
             for item in user.mail_box:
                 if item[0] == "type your new password":
+                    set_new_password = {item[0]: item[1]}
                     reset_password = True
                 message[item[0]] = f"from [{item[1]}]"
         if reset_password is False:
             return message
         elif reset_password:
-            return dict()
+            user.mail_box.remove(("type your new password", "Admin"))
+            return set_new_password
             
 
 

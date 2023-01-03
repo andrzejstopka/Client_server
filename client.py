@@ -12,32 +12,35 @@ def admin_panel():
     while True:
         admin_command = input("Type the command: ")
         client_socket.send(admin_command.encode("utf8"))
-        server_answer = client_socket.recv(1024)
-        server_answer = server_answer.decode("utf8")
-
-        if server_answer == "reset password":
+        
+        if admin_command == "reset":
             reset_password()
-        elif server_answer == "sendtoall":
+        elif admin_command == "sendall":
             send_to_all()
-        elif server_answer == "readfor":
+        elif admin_command == "readfor":
             read_for()
-        elif server_answer == "delete":
+        elif admin_command == "delete":
             delete_user()
-        elif server_answer == "off":
+        elif admin_command == "off":
+            response = client_socket.recv(1024)
+            print(response.decode("utf-8"))
             return
         else:
-            print(server_answer)
+            print("Unknown command, please try again")
 
 
 def reset_password():
     user_name = input("Enter user name to reset his password: ").strip()
     client_socket.send(user_name.encode("utf8"))
+    response = client_socket.recv(1024)
+    print(response.decode("utf8"))
 
 
 def send_to_all():
     message_content = input("Your message: ")
     client_socket.send(message_content.encode("utf8"))
-    print("Your message has been sent to all")
+    response = client_socket.recv(1024)
+    print(response.decode("utf8"))
 
 
 def read_for():
@@ -104,7 +107,8 @@ def read_message():
     print("[YOUR MAIL BOX]")
     message = client_socket.recv(1024)
     message = json.loads(message)
-    if not message:
+    if "type your new password" in message:
+        print("You must enter your new password")
         new_password = pwinput.pwinput(prompt="Enter your new password: ", mask="*")
         client_socket.send(new_password.encode("utf-8"))
         response = client_socket.recv(1024)
@@ -127,7 +131,7 @@ while True:
     if data == "admin":
         admin_panel()
     elif data == "becomeanadmin":
-        print(msg)
+        print(client_socket.recv(1024).decode("utf-8"))
     elif data == "create":
         create_account()
     elif data == "login":
@@ -140,8 +144,11 @@ while True:
         response = client_socket.recv(1024).decode("utf-8")
         print(response)
     elif data == "off":
-        print("You have been logged out")
-        continue
+        response = client_socket.recv(1024).decode("utf-8")
+        if "Error" in response:
+            print("[Error] Unknown command, please try again")
+        else:
+            print(response)
     elif data == "stop":
         print("Goodbye!")
         client_socket.close()

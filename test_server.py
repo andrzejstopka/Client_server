@@ -1,5 +1,6 @@
 import unittest
-from server import *
+from server import User, server
+import json
 
 
 class TestServer(unittest.TestCase):
@@ -18,7 +19,7 @@ class TestServer(unittest.TestCase):
 
         self.assertFalse(result_1)
         self.assertTrue(result_2)
-    
+
     def test_login(self):
         login_data_1 = {"Andrzej": "Stopka"}
         login_data_2 = {"Andrzej": "Andrzej"}
@@ -48,7 +49,7 @@ class TestServer(unittest.TestCase):
 
         result_1 = self.server.read_message(self.andrzej)
         result_2 = self.server.read_message(self.ania)
-        
+
         self.assertIsInstance(result_1, dict)
         self.assertEqual(result_2, {"[INFO]": "You don't have any messages"})
 
@@ -57,19 +58,19 @@ class TestServer(unittest.TestCase):
         result_1 = self.server.read_for("Andrzej")
         result_2 = self.server.read_for("Ania")
         result_3 = self.server.read_for("anybody")
-        
+
         self.assertEqual(result_1, json.dumps({"hej": "Ania", "co tam": "Ania"}))
         self.assertEqual(result_2, json.dumps({"[INFO]": "You don't have any messages"}))
         self.assertEqual(result_3, json.dumps({"[ERROR]": "User not found"}))
-        
+
     def test_delete_user(self):
 
         result_1 = self.server.delete_user("Ania")
         result_2 = self.server.delete_user("anybody")
 
-        self.assertEqual(result_1, f"User Ania has been deleted".encode("utf8"))
-        self.assertEqual(result_2, f"User anybody not found".encode("utf8"))
+        self.assertEqual(result_1, "User Ania has been deleted".encode("utf8"))
+        self.assertEqual(result_2, "User anybody not found".encode("utf8"))
+
 
 if __name__ == "__main__":
     unittest.main()
-

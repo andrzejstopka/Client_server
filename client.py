@@ -12,7 +12,7 @@ def admin_panel():
     while True:
         admin_command = input("Type the command: ")
         client_socket.send(admin_command.encode("utf8"))
-
+        
         if admin_command == "reset":
             reset_password()
         elif admin_command == "sendall":
@@ -73,31 +73,28 @@ def create_account():
         print(response)
         if response == "Account created succesfully":
             break
+        
 
 
 def log_in():
     print("[LOGIN YOUR ACCOUNT]")
     while True:
         name = input("Name: ").strip()
-        password = pwinput.pwinput(
-            prompt='Password (if you want to reset your password type here "reset"): ',
-            mask="*",
-        )
+        password = pwinput.pwinput(prompt='Password (if you want to reset your password type here "reset"): ',mask="*",)
         login_data = json.dumps({name: password})
         client_socket.send(bytes(login_data, encoding="utf8"))
-
+    
         response = client_socket.recv(1024)
         response = response.decode("utf8")
         print(response)
         if response != "Invalid username or password. Try again.":
             break
+            
 
 
 def send_message():
     print("[SEND A MESSAGE]")
-    recipient = input(
-        'Enter an username (if you want to send a message to the administrator type "admin"): '
-    ).strip()
+    recipient = input('Enter an username (if you want to send a message to the administrator type "admin"): ').strip()
     message = input("Enter a message: ")
     message_data = json.dumps({recipient: message})
     client_socket.send(bytes(message_data, encoding="utf-8"))
@@ -119,8 +116,7 @@ def read_message():
     else:
         for key, value in message.items():
             print(key, value)
-
-
+    
 HOST = socket.gethostbyname(socket.gethostname())
 PORT = 31415
 

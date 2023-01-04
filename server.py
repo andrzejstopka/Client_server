@@ -20,11 +20,7 @@ class Server:
             print("Server listening on...")
             client_socket, address = server_socket.accept()
             print(f"Client connected from {address[0]}:{address[1]}")
-            client_socket.send(
-                'Welcome to the server, type "help" to check all commands'.encode(
-                    "utf8"
-                )
-            )
+            client_socket.send('Welcome to the server, type "help" to check all commands'.encode("utf8"))
             return client_socket, address
 
     def server_menu(self, client_socket):
@@ -38,51 +34,37 @@ class Server:
 
             elif data == self.admin_password and user is not None:
                 user.admin = True
-                connection.send(
-                    "You have authenticated, you are given administrator privileges".encode(
-                        "utf8"
-                    )
-                )
+                connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
 
+           
             elif data == "create" and user is None:
                 while True:
                     resposne = connection.recv(1024)
                     account_data = json.loads(resposne)
-                    if self.create_account(account_data) is True:
+                    if self.create_account(account_data) == True:
                         connection.send("Account created succesfully".encode("utf8"))
                         user_name = list(account_data.keys())[0]
-                        print(
-                            f'[{client_socket.address[0]}:{client_socket.address[1]}] Account "{user_name}" created'
-                        )
+                        print(f'[{client_socket.address[0]}:{client_socket.address[1]}] Account "{user_name}" created')
                         break
                     else:
-                        connection.send(
-                            "Username is already taken. Try again.".encode("utf8")
-                        )
-
+                        connection.send("Username is already taken. Try again.".encode("utf8")) 
+            
             elif data == "login" and user is None:
                 while True:
                     data = connection.recv(1024)
                     login_data = json.loads(data)
-                    if self.login(login_data) is not False:
+                    if self.login(login_data) != False:
                         user = self.login(login_data)
                         if user is None:
-                            connection.send(
-                                'Your password reset request has been sent. After the admin reset your password, log on with "newpassword" and go to your inbox to set the new password'.encode(
-                                    "utf-8"
-                                )
-                            )
+                            connection.send("Your password reset request has been sent. After the admin reset your password, log on with \"newpassword\" and go to your inbox to set the new password".encode("utf-8"))
                         else:
                             connection.send("Logged in successfully.".encode("utf8"))
-                            print(
-                                f'[{client_socket.address[0]}:{client_socket.address[1]}] Account "{user.name}" has been logged'
-                            )
+                            print(f'[{client_socket.address[0]}:{client_socket.address[1]}] Account "{user.name}" has been logged')
                         break
                     else:
-                        connection.send(
-                            "Invalid username or password. Try again.".encode("utf-8")
-                        )
-
+                        connection.send("Invalid username or password. Try again.".encode('utf-8'))
+            
+            
             elif data == "send" and user is not None:
                 message_data = connection.recv(1024)
                 message_data = json.loads(message_data)
@@ -90,10 +72,9 @@ class Server:
                 connection.send(response)
                 if response == "Your message to admin has been sent!".encode("utf8"):
                     recipient_name = list(message_data.keys())[0]
-                    print(
-                        f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {recipient_name}"
-                    )
+                    print(f"[{client_socket.address[0]}:{client_socket.address[1]}] User {user.name} sent message to {recipient_name}")
 
+            
             elif data == "read" and user is not None:
                 response = self.read_message(user)
                 response = json.dumps(response)
@@ -108,18 +89,13 @@ class Server:
                 user.clear_inbox()
                 connection.send("Your inbox is now empty".encode("utf8"))
 
+                
             elif data == "uptime":
-                connection.send(
-                    bytes(json.dumps(self.commands(user)[0]), encoding="utf8")
-                )
+                connection.send(bytes(json.dumps(self.commands(user)[0]), encoding="utf8"))
             elif data == "info":
-                connection.send(
-                    bytes(json.dumps(self.commands(user)[1]), encoding="utf8")
-                )
+                connection.send(bytes(json.dumps(self.commands(user)[1]), encoding="utf8"))
             elif data == "help":
-                connection.send(
-                    bytes(json.dumps(self.commands(user)[2]), encoding="utf8")
-                )
+                connection.send(bytes(json.dumps(self.commands(user)[2]), encoding="utf8"))
             elif data == "stop":
                 connection.send("Stop the client".encode("utf8"))
                 connection.close()
@@ -127,14 +103,10 @@ class Server:
                 break
             elif data == "off" and user is not None:
                 connection.send("You have been logged out".encode("utf8"))
-                print(
-                    f'[{client_socket.address[0]}:{client_socket.address[1]}] User "{user.name}" has been logged out'
-                )
+                print(f'[{client_socket.address[0]}:{client_socket.address[1]}] User "{user.name}" has been logged out')
                 user = None
             else:
-                connection.send(
-                    bytes(json.dumps(self.commands(user)[3]), encoding="utf8")
-                )
+                connection.send(bytes(json.dumps(self.commands(user)[3]), encoding="utf8"))
             with open("users.json", "w") as data:
                 json.dump(self.all_users, data, default=lambda u: u.user_to_dict())
                 continue
@@ -184,9 +156,7 @@ class Server:
                 user_name = connection.recv(1024)
                 user_name = user_name.decode("utf8")
                 self.reset_password(user_name)
-                connection.send(
-                    f"Password user {user_name} has been reset".encode("utf8")
-                )
+                connection.send(f"Password user {user_name} has been reset".encode("utf8"))
 
             elif command == "sendall":
                 message_content = connection.recv(1024)
@@ -198,6 +168,7 @@ class Server:
                 username = connection.recv(1024)
                 username = username.decode("utf8")
                 connection.send(bytes(self.read_for(username), encoding="utf8"))
+
 
             elif command == "delete":
                 username = connection.recv(1024)
@@ -223,6 +194,7 @@ class Server:
                 user.mail_box.append((message_content, "Admin"))
 
     def read_for(self, username):
+        
         user_inbox = dict()
         for user in self.all_users:
             if user.name == username:
@@ -280,9 +252,7 @@ class Server:
                 for recipient in self.all_users:
                     if name == recipient.name:
                         if len(recipient.mail_box) >= 5 and recipient.admin is False:
-                            return "The recipient's inbox is full, you cannot send the message".encode(
-                                "utf8"
-                            )
+                            return "The recipient's inbox is full, you cannot send the message".encode("utf8")
                         recipient.mail_box.append((message, user.name))
                         return "Your message has been sent!".encode("utf-8")
                 return "There is no such user".encode("utf8")
@@ -303,6 +273,8 @@ class Server:
         elif reset_password:
             user.mail_box.remove(("type your new password", "Admin"))
             return set_new_password
+            
+
 
 
 class Client:
@@ -334,7 +306,6 @@ class User:
     @classmethod
     def from_dict(cls, data):
         return cls(data["name"], data["password"], data["admin"], data["mail_box"])
-
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 if __name__ == "__main__":

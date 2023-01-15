@@ -6,7 +6,7 @@ import socket
 class Server:
     all_users = []
     admin_password = "becomeanadmin"
-
+    
     def __init__(self, host, port):
 
         self.host = host
@@ -39,8 +39,8 @@ class Server:
            
             elif data == "create" and user is None:
                 while True:
-                    resposne = connection.recv(1024)
-                    account_data = json.loads(resposne)
+                    response = connection.recv(1024)
+                    account_data = json.loads(response)
                     if self.create_account(account_data) == True:
                         connection.send("Account created succesfully".encode("utf8"))
                         user_name = list(account_data.keys())[0]
@@ -186,12 +186,12 @@ class Server:
         for user in self.all_users:
             if user.name == username:
                 user.password = "newpassword"
-                user.mail_box.append(("type your new password", "Admin"))
+                user.mail_box.append(["type your new password", "Admin"])
 
     def send_to_all(self, message_content):
         for user in self.all_users:
             if user.admin is False:
-                user.mail_box.append((message_content, "Admin"))
+                user.mail_box.append([message_content, "Admin"])
 
     def read_for(self, username):
         
@@ -232,7 +232,7 @@ class Server:
             if password == "reset":
                 for user in self.all_users:
                     if user.admin is True:
-                        user.mail_box.append(("[PASSWORD RESET REQUEST]", name))
+                        user.mail_box.append(["[PASSWORD RESET REQUEST]", name])
                         return
             for user in self.all_users:
                 if user.name == name and user.password == password:
@@ -246,14 +246,14 @@ class Server:
             elif name == "admin":
                 for admin in self.all_users:
                     if admin.admin is True:
-                        admin.mail_box.append((message, user.name))
+                        admin.mail_box.append([message, user.name])
                 return "Your message to admin has been sent!".encode("utf8")
             else:
                 for recipient in self.all_users:
                     if name == recipient.name:
                         if len(recipient.mail_box) >= 5 and recipient.admin is False:
                             return "The recipient's inbox is full, you cannot send the message".encode("utf8")
-                        recipient.mail_box.append((message, user.name))
+                        recipient.mail_box.append([message, user.name])
                         return "Your message has been sent!".encode("utf-8")
                 return "There is no such user".encode("utf8")
 
@@ -271,7 +271,7 @@ class Server:
         if reset_password is False:
             return message
         elif reset_password:
-            user.mail_box.remove(("type your new password", "Admin"))
+            user.mail_box.remove(["type your new password", "Admin"])
             return set_new_password
             
 

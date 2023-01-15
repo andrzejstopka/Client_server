@@ -1,6 +1,7 @@
 import datetime
 import json
 import socket
+from database_config import database
 
 
 class Server:
@@ -84,6 +85,7 @@ class Server:
                     new_password = new_password.decode("utf8")
                     connection.send("Your password has been changed".encode("utf8"))
                     user.password = new_password
+                    database.set_password(user.name, new_password)
 
             elif data == "clear" and user is not None:
                 user.clear_inbox()
@@ -107,15 +109,13 @@ class Server:
                 user = None
             else:
                 connection.send(bytes(json.dumps(self.commands(user)[3]), encoding="utf8"))
-            with open("users.json", "w") as data:
-                json.dump(self.all_users, data, default=lambda u: u.user_to_dict())
-                continue
+
 
     def commands(self, user):
         uptime = {"Uptime": str(datetime.datetime.now() - self.start_time)}
         info = {
             "Title": "My First Client/Server Application",
-            "Version": "1.1.0",
+            "Version": "2.1.0",
             "Date created": "21.12.2022",
         }
         help = {
@@ -186,22 +186,24 @@ class Server:
         for user in self.all_users:
             if user.name == username:
                 user.password = "newpassword"
-                user.mail_box.append(["type your new password", "Admin"])
+                user.mail_box["type your new password"] = "Admin"
+                database.reset_password(username)
+
 
     def send_to_all(self, message_content):
         for user in self.all_users:
             if user.admin is False:
-                user.mail_box.append([message_content, "Admin"])
+                user.mail_box[message_content] = "Admin"
 
     def read_for(self, username):
         
         user_inbox = dict()
         for user in self.all_users:
             if user.name == username:
-                for message in user.mail_box:
-                    user_inbox[message[0]] = message[1]
-                if user_inbox == {}:
+                if user.mail_box == {}:
                     user_inbox["[INFO]"] = "You don't have any messages"
+                else:
+                    user_inbox = user.mail_box
         if user_inbox == {}:
             user_inbox["[ERROR]"] = "User not found"
         user_inbox = json.dumps(user_inbox)
@@ -224,7 +226,8 @@ class Server:
                     found = True
                     return False
             if not found and key != "admin" and value != "reset":
-                User(key, value, False, list())
+                User(key, value, False, dict())
+                database.add_user(key, value, False, dict())
                 return True
 
     def login(self, login_data):
@@ -232,7 +235,7 @@ class Server:
             if password == "reset":
                 for user in self.all_users:
                     if user.admin is True:
-                        user.mail_box.append(["[PASSWORD RESET REQUEST]", name])
+                        user.mail_box["[PASSWORD RESET REQUEST]"] = name
                         return
             for user in self.all_users:
                 if user.name == name and user.password == password:
@@ -246,14 +249,14 @@ class Server:
             elif name == "admin":
                 for admin in self.all_users:
                     if admin.admin is True:
-                        admin.mail_box.append([message, user.name])
+                        admin.mail_box[message] = user.name
                 return "Your message to admin has been sent!".encode("utf8")
             else:
                 for recipient in self.all_users:
                     if name == recipient.name:
                         if len(recipient.mail_box) >= 5 and recipient.admin is False:
                             return "The recipient's inbox is full, you cannot send the message".encode("utf8")
-                        recipient.mail_box.append([message, user.name])
+                        recipient.mail_box[message] = user.name
                         return "Your message has been sent!".encode("utf-8")
                 return "There is no such user".encode("utf8")
 
@@ -263,7 +266,7 @@ class Server:
         if len(user.mail_box) == 0:
             return {"[INFO]": "You don't have any messages"}
         else:
-            for item in user.mail_box:
+            for item in user.mail_box.items():
                 if item[0] == "type your new password":
                     set_new_password = {item[0]: item[1]}
                     reset_password = True
@@ -271,7 +274,7 @@ class Server:
         if reset_password is False:
             return message
         elif reset_password:
-            user.mail_box.remove(["type your new password", "Admin"])
+            del user.mail_box["type your new password"]
             return set_new_password
             
 
@@ -303,16 +306,11 @@ class User:
     def clear_inbox(self):
         self.mail_box = []
 
-    @classmethod
-    def from_dict(cls, data):
-        return cls(data["name"], data["password"], data["admin"], data["mail_box"])
-
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 if __name__ == "__main__":
     try:
-        with open("users.json", "r") as data_file:
-            data = json.load(data_file)
-        server.all_users = [User.from_dict(d) for d in data]
+        data = database.load_data()
+        server.all_users = [User(row[0], row[1], row[2], row[3]) for row in data]
     except json.decoder.JSONDecodeError:
         server.all_users = []
     client = Client(server)

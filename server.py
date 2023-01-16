@@ -216,6 +216,7 @@ class Server:
             if user.name == username:
                 self.all_users.remove(user)
                 del user
+                database.delete_user(username)
                 return f"User {username} has been deleted".encode("utf8")
         return f"User {username} not found".encode("utf8")
 
@@ -311,10 +312,7 @@ class User:
 
 server = Server(socket.gethostbyname(socket.gethostname()), 31415)
 if __name__ == "__main__":
-    try:
-        data = database.load_data()
-        server.all_users = [User(row[0], row[1], row[2], row[3]) for row in data]
-    except json.decoder.JSONDecodeError:
-        server.all_users = []
+    data = database.load_data()
+    server.all_users = [User(row[0], row[1], row[2], row[3]) for row in data]
     client = Client(server)
     server.server_menu(client)

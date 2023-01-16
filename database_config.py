@@ -66,28 +66,21 @@ class Database():
     def send_to_all(self, message):
         send_to_all_query = """UPDATE users
         SET inbox = inbox::jsonb || %s
-        where admin = %s """
+        where admin = %s"""
         record_to_execute = (Json({message: "admin"}), False)
         self.cursor.execute(send_to_all_query, record_to_execute)
         self.connection.commit()
+    
+    def delete_user(self, user):
+        delete_user_query = "DELETE FROM users WHERE name = %s"
 
-
+        self.cursor.execute(delete_user_query, (user,))
+        self.connection.commit()
 
 
 database = Database()
 
-# database.create_user_table()
-# database.add_user("Andrzej", "Stopka", False, {"hej": "admin", "co tam": "andrzej"})
-# database.add_user("Ania", "Stopka", True, {"hej co tam": "admin", "eluwa": "andrzej"})
-# database.add_user("Tymon", "Stopka", True, dict())
-# database.add_user("dionizy", "stopka", False, {"hej co tam": "admin", "eluwa": "andrzej"})
 
-# database.reset_password()
-# database.reset_password("dionizy")
-
-# database.send_message({"no siemano": "dionizy"}, "Tymon")
-
-database.send_to_all("siemano od admina test")
 
 
 

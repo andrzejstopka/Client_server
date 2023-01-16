@@ -2,8 +2,9 @@ import psycopg2
 from psycopg2.extras import Json
 
 
+
 class Database():
-    connection = psycopg2.connect(user="postgres", password="superuser", host="127.0.0.1", port="5432", dbname="users")
+    connection = psycopg2.connect(user="postgres", password="superuser", host="127.0.0.1", port="5432", dbname="clientserver")
     cursor = connection.cursor()
 
     def create_user_table(self):
@@ -11,7 +12,7 @@ class Database():
         (NAME TEXT PRIMARY KEY NOT NULL,
         PASSWORD TEXT NOT NULL,
         ADMIN BOOL NOT NULL,
-        INBOX json);"""
+        INBOX jsonb);"""
 
         self.cursor.execute(create_table_query)
         self.connection.commit()
@@ -31,21 +32,45 @@ class Database():
 
     def reset_password(self, user):
         reset_password_query = """UPDATE users
-        SET password = %s, 
-        inbox = inbox || %s
+        SET password = %s,
+        inbox = inbox::jsonb || '{"type your new password":"Admin"}'
         WHERE name = %s"""
-        
-        self.cursor.execute(reset_password_query, ("newpassword", Json({"type your new password": "Admin"}), user))
+
+        record_to_execute = ("newpassword", user)
+        self.cursor.execute(reset_password_query, record_to_execute)
         self.connection.commit()
-
-        Ogarnąć reset password do bazy
-
+    
     def set_password(self, user, password):
         set_password_query = """UPDATE users
         SET password = %s
         WHERE name = %s"""
         self.cursor.execute(set_password_query, (password, user))
         self.connection.commit()
+
+    def become_admin(self, user):
+        become_admin_query = """UPDATE users
+        SET admin = %s
+        WHERE name = %s"""
+
+        self.cursor.execute(become_admin_query, (True, user))
+        self.connection.commit()
+
+    def send_message(self, message_data, recipient):
+        send_message_query = """UPDATE users
+        SET inbox = inbox::jsonb || %s
+        where name = %s"""
+        record_to_execute = (Json(message_data), recipient)
+        self.cursor.execute(send_message_query, record_to_execute)
+        self.connection.commit()
+    
+    def send_to_all(self, message):
+        send_to_all_query = """UPDATE users
+        SET inbox = inbox::jsonb || %s
+        where admin = %s """
+        record_to_execute = (Json({message: "admin"}), False)
+        self.cursor.execute(send_to_all_query, record_to_execute)
+        self.connection.commit()
+
 
 
 
@@ -55,9 +80,14 @@ database = Database()
 # database.add_user("Andrzej", "Stopka", False, {"hej": "admin", "co tam": "andrzej"})
 # database.add_user("Ania", "Stopka", True, {"hej co tam": "admin", "eluwa": "andrzej"})
 # database.add_user("Tymon", "Stopka", True, dict())
+# database.add_user("dionizy", "stopka", False, {"hej co tam": "admin", "eluwa": "andrzej"})
 
 # database.reset_password()
+# database.reset_password("dionizy")
 
+# database.send_message({"no siemano": "dionizy"}, "Tymon")
+
+database.send_to_all("siemano od admina test")
 
 
 

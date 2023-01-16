@@ -35,6 +35,7 @@ class Server:
 
             elif data == self.admin_password and user is not None:
                 user.admin = True
+                database.become_admin(user.name)
                 connection.send("You have authenticated, you are given administrator privileges".encode("utf8"))
 
            
@@ -194,6 +195,7 @@ class Server:
         for user in self.all_users:
             if user.admin is False:
                 user.mail_box[message_content] = "Admin"
+                database.send_to_all(message_content)
 
     def read_for(self, username):
         
@@ -257,6 +259,7 @@ class Server:
                         if len(recipient.mail_box) >= 5 and recipient.admin is False:
                             return "The recipient's inbox is full, you cannot send the message".encode("utf8")
                         recipient.mail_box[message] = user.name
+                        database.send_message({message: user.name}, recipient.name)
                         return "Your message has been sent!".encode("utf-8")
                 return "There is no such user".encode("utf8")
 

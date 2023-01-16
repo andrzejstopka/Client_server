@@ -76,9 +76,15 @@ class Database():
 
         self.cursor.execute(delete_user_query, (user,))
         self.connection.commit()
-
+    
+    def clear_inbox(self, user):
+        clear_inbox_query = "UPDATE users SET inbox = %s WHERE name = %s"
+        self.cursor.execute(clear_inbox_query, (Json({}), user))
+        self.connection.commit()
 
 database = Database()
+
+database.clear_inbox("ania")
 
 
 
